@@ -1,0 +1,180 @@
+---
+title: "Homework2.Rmd"
+output: html_document
+date: "2025-02-15"
+---
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+raw_sales <- read.csv("/Users/diyapatel/Downloads/archive 2/raw_sales.csv", header = FALSE)
+
+knitr::opts_chunk$set(echo = TRUE)
+
+knitr::opts_chunk$set(message=FALSE)
+
+raw_sales.ts<-ts(raw_sales[,2], start=c(2007,1), end=c(2018,4), frequency=4)
+raw_sales.ts
+
+```
+
+## Headers
+
+```{r}
+
+names(raw_sales)[1]<- "Date Sold"
+
+names(raw_sales)[2]<- "Post Code"
+
+names(raw_sales)[3]<- "Price" 
+
+names(raw_sales)[4]<- "Property Type"
+
+names(raw_sales)[5]<- "Number of Bedrooms"
+
+```
+
+## Plot House Prices Over Time
+
+```{r}
+library(forecast)
+
+raw_sales$Price <- as.numeric(raw_sales$Price)
+
+raw_sales <- na.omit(raw_sales)  
+
+ts_price <- ts(raw_sales$Price, start = c(2007, 1), end = c(2018, 4), frequency = 4)
+
+plot.ts(ts_price, main = "House Prices Over Time", ylab = "Price", col = "blue", lwd = 2)
+```
+
+## ACF of House Prices
+
+```{r}
+library(forecast)
+ts_price <- ts(raw_sales$Price, start = c(2007, 1), end=c(2018,4), frequency = 4)
+ts_price <- as.numeric(ts_price)
+ts_price <- na.omit(ts_price)
+ts_price <- ts(ts_price, start = c(2007, 1), frequency = 4)
+Acf(ts_price, main = "ACF of House Prices")
+```
+
+## Decomposition of House Prices
+
+```{r}
+library(forecast)
+raw_sales$Price <- as.numeric(raw_sales$Price)
+ts_price <- ts(raw_sales$Price, start = c(2007, 1), end = c(2018, 4), frequency = 4)
+ts_price <- na.interp(ts_price)
+ets_forecast <- ets(ts_price)
+plot(ets_forecast)
+attributes(ets_forecast)
+mse_value <- mean(ets_forecast$residuals^2, na.rm = TRUE)
+print(mse_value)
+```
+
+## Forecasts
+```{r}
+library(forecast)
+library(ggplot2)
+library(scales)
+library(dplyr)
+
+raw_sales$Price <- as.numeric(raw_sales$Price)
+
+ts_price <- ts(raw_sales$Price, start = c(2007, 1), end = c(2018, 4), frequency = 4)
+
+ts_price <- na.interp(ts_price)
+
+mean_forecast <- meanf(ts_price, h = 5)
+naive_forecast <- naive(ts_price, h = 5)
+rwf_forecast <- rwf(ts_price, h = 5)
+snaive_forecast <- snaive(ts_price, h = 5)
+holtwinters_model <- HoltWinters(ts_price)
+holtwinters_forecast <- forecast(holtwinters_model, h = 5)
+
+MA5_forecast <- ma(ts_price, order = 5)
+MA9_forecast <- ma(ts_price, order = 9)
+
+# Individual Plots for Each Forecasting Method
+par(mfrow = c(3, 3)) # Set up a 3x3 plotting grid
+
+plot(ts_price, main="Actual Time Series", col="black", lwd=2, ylab="Price")
+
+plot(mean_forecast, main="Mean Forecast", col="blue", lwd=2)
+
+plot(naive_forecast, main="Naive Forecast", col="red", lwd=2)
+
+plot(rwf_forecast, main="Random Walk Forecast", col="green", lwd=2)
+
+plot(snaive_forecast, main="Seasonal Naive Forecast", col="purple", lwd=2)
+
+plot(holtwinters_forecast, main="Holt-Winters Forecast", col="orange", lwd=2)
+
+plot(ts_price, main="Moving Average (MA5)", col="black", lwd=2)
+lines(MA5_forecast, col="pink", lwd=2)
+
+plot(ts_price, main="Moving Average (MA9)", col="black", lwd=2)
+lines(MA9_forecast, col="blue", lwd=2)
+
+par(mfrow = c(1,1))
+```
+
+## Forecasts in One Chart
+```{r}
+library(forecast)
+library(ggplot2)
+library(scales)
+library(dplyr)
+
+raw_sales$Price <- as.numeric(raw_sales$Price)
+
+ts_price <- ts(raw_sales$Price, start = c(2007, 1), end = c(2018, 4), frequency = 4)
+
+ts_price <- na.interp(ts_price)
+
+mean_forecast <- meanf(ts_price, h = 5)
+
+naive_forecast <- naive(ts_price, h = 5)
+
+rwf_forecast <- rwf(ts_price, h = 5)
+
+snaive_forecast <- snaive(ts_price, h = 5)
+
+holtwinters_model <- HoltWinters(ts_price)
+holtwinters_forecast <- forecast(holtwinters_model, h = 5)
+
+MA5_forecast <- ma(ts_price, order = 5)
+MA9_forecast <- ma(ts_price, order = 9)
+
+actual_df <- data.frame(Time = time(ts_price), Price = as.numeric(ts_price), Model = "Actual")
+
+mean_df <- data.frame(Time = time(mean_forecast$mean), Price = as.numeric(mean_forecast$mean), Model = "Mean Forecast")
+
+naive_df <- data.frame(Time = time(naive_forecast$mean), Price = as.numeric(naive_forecast$mean), Model = "Naive Forecast")
+
+rwf_df <- data.frame(Time = time(rwf_forecast$mean), Price = as.numeric(rwf_forecast$mean), Model = "Random Walk Forecast")
+
+snaive_df <- data.frame(Time = time(snaive_forecast$mean), Price = as.numeric(snaive_forecast$mean), Model = "Seasonal Naive Forecast")
+
+holtwinters_df <- data.frame(Time = time(holtwinters_forecast$mean), Price = as.numeric(holtwinters_forecast$mean), Model = "Holt-Winters Forecast")
+
+ma5_df <- data.frame(Time = time(MA5_forecast), Price = as.numeric(MA5_forecast), Model = "MA5 Forecast")
+
+ma9_df <- data.frame(Time = time(MA9_forecast), Price = as.numeric(MA9_forecast), Model = "MA9 Forecast")
+
+all_forecasts <- bind_rows(actual_df, mean_df, naive_df, rwf_df, snaive_df, holtwinters_df, ma5_df, ma9_df)
+
+all_forecasts <- na.omit(all_forecasts)
+
+ggplot(all_forecasts, aes(x = Time, y = Price, color = Model, linetype = Model)) +
+  geom_line(linewidth = 1) + 
+  labs(title = "Time Series Price Forecasts",
+       x = "Time",
+       y = "Price") +
+  scale_y_continuous(labels = scales::comma) +
+  theme_minimal()
+```
